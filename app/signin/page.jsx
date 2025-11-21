@@ -25,22 +25,22 @@ export default function SignInPage() {
   const [confirmation, setConfirmation] = useState(null)
   const [recaptchaInitialized, setRecaptchaInitialized] = useState(false)
 
+  // In your component
   useEffect(() => {
-    // Initialize reCAPTCHA when component mounts
-    const initializeRecaptcha = () => {
+    // Initialize reCAPTCHA with a small delay to ensure DOM is ready
+    const initializeRecaptcha = async () => {
       try {
-        // This will initialize the invisible reCAPTCHA
-        // The actual rendering happens when we call sendOtpToPhone
+        // Small delay to ensure container exists
+        await new Promise(resolve => setTimeout(resolve, 100));
         setRecaptchaInitialized(true);
       } catch (error) {
-        console.error("Failed to initialize reCAPTCHA:", error);
-        setErrors({ submit: "Failed to initialize security verification. Please refresh the page." });
+        console.error("reCAPTCHA init error:", error);
+        setErrors({ submit: "Security verification failed to load. Please refresh." });
       }
     };
 
     initializeRecaptcha();
 
-    // Cleanup on unmount
     return () => {
       clearRecaptchaVerifier();
     };
@@ -137,7 +137,7 @@ export default function SignInPage() {
 
   const handleSendOTP = async (e) => {
     if (e) e.preventDefault();
-    
+
     if (!validatePhone()) return
 
     if (!recaptchaInitialized) {
@@ -173,7 +173,7 @@ export default function SignInPage() {
       // Send OTP via Firebase
       const conf = await sendOtpToPhone(formattedPhone)
       setConfirmation(conf)
-      
+
       // Store farmer data and move to OTP step
       setFarmerData(checkResult.data)
       setStep(2)
@@ -182,7 +182,7 @@ export default function SignInPage() {
 
     } catch (error) {
       console.error("Error sending OTP:", error)
-      
+
       // Handle Firebase errors with user-friendly messages
       let errorMessage = "Failed to send OTP. Please try again.";
 
@@ -231,7 +231,7 @@ export default function SignInPage() {
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault()
-    
+
     if (!validateOTP()) return
 
     setIsLoading(true)
@@ -243,7 +243,7 @@ export default function SignInPage() {
         setStep(1);
         return;
       }
-      
+
       const result = await confirmation.confirm(formData.otp.join(""))
       const idToken = await result.user.getIdToken()
 
@@ -269,16 +269,16 @@ export default function SignInPage() {
       // Store token and redirect to farmer dashboard
       localStorage.setItem("farmerToken", loginResult.data.token)
       localStorage.setItem("currentFarmer", JSON.stringify(loginResult.data.farmer))
-      
+
       console.log("Login successful:", loginResult.data.farmer.name)
-      window.location.href = "/dashboard/farmer"
+      window.location.href = "/dashboard"
 
     } catch (error) {
       console.error("Error verifying OTP:", error)
-      
+
       // Handle OTP verification errors
       let errorMessage = "OTP verification failed. Please try again.";
-      
+
       if (error.code === "auth/invalid-verification-code") {
         errorMessage = "Invalid verification code. Please check and try again.";
       } else if (error.code === "auth/code-expired") {
@@ -290,7 +290,7 @@ export default function SignInPage() {
       } else if (error.code === "auth/internal-error") {
         errorMessage = "Verification service error. Please try again.";
       }
-      
+
       setErrors({ submit: errorMessage })
     } finally {
       setIsLoading(false)
